@@ -209,6 +209,16 @@ every gap-closure feature: signup → login → session cookie → SSR private-r
 org/team/grant creation and a real `git push` by a team member, search, blame, syntax
 highlighting, labels/milestones/assignees, PR tabs).
 
+## Landing page (post-M9)
+The homepage is now the Claude Design "Cairn Landing" composition, ported to the App
+Router: `web/app/(landing)/` (page, layout, `landing.css`) plus
+`web/components/landing/` (`CairnScene.tsx` lifecycle wrapper, `cairnScene.ts` WebGL
+engine, `LandingBrowseForm.tsx`). Product routes moved into the `web/app/(app)/`
+route group, which now owns the top bar; URLs are unchanged. `three` 0.184.0 is a new
+`web` dependency, pinned exactly and code-split. `npm run build` and
+`npx eslint app components lib` are clean; verified in a browser at 1440px, 1280px,
+and 700px.
+
 ## Next
 All nine milestones plus the gap-closure round are complete. See `SUMMARY.md` for the
 FR-by-FR completion audit, the full state of the project, exact build/run commands,

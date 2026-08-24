@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseOwnerRepoPath } from "@/lib/repoPath";
 
-/** The top-bar "jump to a repository" box - same relative-navigation rule as {@link BrowseForm}. */
+/** The top-bar "jump to a repository" box - same relative-navigation rule as {@link LandingBrowseForm}. */
 export function GotoSearchBox() {
   const [value, setValue] = useState("");
   const router = useRouter();

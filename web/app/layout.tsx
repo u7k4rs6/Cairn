@@ -1,10 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Overpass, Overpass_Mono } from "next/font/google";
-import { SessionStatus } from "@/components/SessionStatus";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { CairnMark } from "@/components/CairnMark";
-import { GotoSearchBox } from "@/components/GotoSearchBox";
 import "./globals.css";
 
 // Self-hosted via next/font (redesign spec, section 4): downloaded at build time
@@ -43,6 +38,12 @@ const NO_FLASH_THEME_SCRIPT = `
 })();
 `;
 
+/**
+ * Document shell only. The two route groups underneath it own their own chrome:
+ * `(app)` renders the signed-in top bar around every product route, `(landing)`
+ * renders the full-bleed marketing hero with its own header. Splitting them this
+ * way keeps the landing page from having to hide a top bar it never wanted.
+ */
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -53,28 +54,7 @@ export default async function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME_SCRIPT }} />
       </head>
-      <body className="min-h-full flex flex-col">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:bg-route focus:text-on-route focus:px-3 focus:py-1.5 focus:rounded"
-        >
-          Skip to content
-        </a>
-        <header className="border-b border-hairline px-4 py-2 flex items-center gap-4 bg-surface">
-          <Link href="/" className="flex items-center gap-2 shrink-0 text-ink hover:text-route transition-colors">
-            <CairnMark size={22} />
-            <span className="font-display font-bold text-lg tracking-tight">cairn</span>
-          </Link>
-          <GotoSearchBox />
-          <div className="ml-auto flex items-center gap-3">
-            <ThemeToggle />
-            <SessionStatus />
-          </div>
-        </header>
-        <main id="main" className="flex-1">
-          {children}
-        </main>
-      </body>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

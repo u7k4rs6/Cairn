@@ -1,0 +1,519 @@
+/*
+  Landing page styles, ported from the Claude Design source ("Cairn Landing.dc.html").
+
+  The design authors everything as inline styles plus `style-hover` / `style-focus`
+  attributes that the design-canvas runtime turns into pseudo-class rules. Real CSS
+  can't be inlined for `:hover`, `:focus`, or media queries, so the whole sheet lives
+  here instead and the JSX carries only class names. Every literal below is the
+  design's value; the palette is named at the top rather than repeated.
+
+  Scoped under `.lp-root` so none of it leaks into the product's light/night themes -
+  the landing is deliberately dark in both.
+*/
+
+.lp-root {
+  --lp-bg: #14160c;
+  --lp-ink: #e9efd6;
+  --lp-heading: #e5edc8;
+  --lp-accent: #afc9a5;
+  --lp-accent-hi: #c6ddbb;
+  --lp-brass: #a6935f;
+  --lp-deck: #a6b08c;
+  --lp-nav: #8c9578;
+  --lp-body: #838c6e;
+  --lp-kicker: #7f8869;
+  --lp-body-dim: #737c60;
+  --lp-faint: #5c6448;
+  --lp-label: #cfd8b6;
+  --lp-rule: rgba(229, 237, 200, 0.11);
+  --lp-rule-faint: rgba(229, 237, 200, 0.07);
+
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--lp-bg);
+  color: var(--lp-ink);
+  font-family: var(--lp-font-ui), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.lp-root ::selection {
+  background: rgba(175, 201, 165, 0.3);
+  color: #fff;
+}
+
+.lp-root a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ---- stage ------------------------------------------------------------- */
+
+.lp-page {
+  position: relative;
+  flex: 1;
+  min-height: max(100vh, 880px);
+  background: var(--lp-bg);
+  overflow: hidden;
+}
+
+/* The WebGL terrain. Layer 0, inert to the pointer so the scene's own
+   window-level pointermove listener is the only thing tracking the cursor. */
+.lp-scene,
+.lp-sky {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Darkens the top and bottom of the render so the header, the feature strip, and
+   the footer sit on near-flat ground instead of on live terrain. */
+.lp-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 22, 12, 0.55) 0%,
+    rgba(20, 22, 12, 0.26) 18%,
+    rgba(20, 22, 12, 0) 36%,
+    rgba(20, 22, 12, 0) 62%,
+    rgba(20, 22, 12, 0.8) 86%,
+    #14160c 100%
+  );
+}
+
+.lp-bloom {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(60% 45% at 50% 8%, rgba(175, 201, 165, 0.06) 0%, rgba(20, 22, 12, 0) 70%);
+}
+
+/* A crescent: a filled disc with an inset shadow in the page background biting a
+   slice out of its right edge. */
+.lp-moon {
+  position: absolute;
+  right: 12vw;
+  top: 13%;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--lp-heading);
+  opacity: 0.9;
+  box-shadow: inset -13px 3px 0 -2px var(--lp-bg);
+}
+
+.lp-star {
+  position: absolute;
+  background: var(--lp-heading);
+}
+
+/* ---- surveyor's annotations -------------------------------------------- */
+
+.lp-annots {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.lp-annot {
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.lp-annot--right {
+  flex-direction: row;
+  text-align: right;
+}
+
+.lp-annot-1 { left: 5.5vw; top: 55%; }
+.lp-annot-2 { right: 5.5vw; top: 58%; }
+.lp-annot-3 { left: 11vw; top: 66%; }
+.lp-annot-4 { right: 11vw; top: 68.5%; }
+
+.lp-note {
+  padding-top: 6px;
+}
+
+.lp-note-key {
+  font-family: var(--lp-font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--lp-accent);
+}
+
+.lp-note-body {
+  margin-top: 7px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--lp-body);
+}
+
+/* A leader line: a hairline rule ending in a survey tick, pointing at the terrain. */
+.lp-leader {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.lp-leader::before,
+.lp-leader::after {
+  content: "";
+  display: block;
+}
+
+.lp-leader::before {
+  width: var(--lp-leader-len, 74px);
+  height: 1px;
+  background: var(--lp-leader-color, rgba(175, 201, 165, 0.55));
+}
+
+.lp-leader::after {
+  width: 4px;
+  height: 4px;
+  background: var(--lp-leader-tick, var(--lp-accent));
+}
+
+/* Right-hand annotations put the tick nearest the terrain, so the pair reverses. */
+.lp-annot--right .lp-leader {
+  flex-direction: row-reverse;
+}
+
+.lp-annot--brass {
+  --lp-leader-len: 52px;
+  --lp-leader-color: rgba(166, 147, 95, 0.6);
+  --lp-leader-tick: var(--lp-brass);
+}
+
+.lp-annot--brass .lp-note-key {
+  color: var(--lp-brass);
+}
+
+.lp-annot--brass .lp-note-body {
+  color: var(--lp-body-dim);
+}
+
+.lp-note-cmd {
+  margin-top: 8px;
+  font-family: var(--lp-font-mono), ui-monospace, monospace;
+  font-size: 12.5px;
+  color: var(--lp-body-dim);
+}
+
+/* ---- content ------------------------------------------------------------ */
+
+.lp-content {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-height: max(100vh, 880px);
+}
+
+.lp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 26px 44px;
+}
+
+.lp-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--lp-ink);
+}
+
+.lp-brand-word {
+  font-family: var(--lp-font-serif), Georgia, serif;
+  font-size: 22px;
+  letter-spacing: 0.01em;
+}
+
+.lp-nav {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  font-size: 14px;
+  letter-spacing: 0.005em;
+}
+
+.lp-nav a {
+  color: var(--lp-nav);
+  transition: color 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lp-nav a:hover {
+  color: var(--lp-ink);
+}
+
+.lp-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.lp-icon-link {
+  display: flex;
+  color: var(--lp-kicker);
+  transition: color 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lp-icon-link:hover {
+  color: var(--lp-accent);
+}
+
+.lp-signin {
+  font-size: 13.5px;
+  color: var(--lp-deck);
+  transition: color 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lp-signin:hover {
+  color: var(--lp-ink);
+}
+
+.lp-cta {
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 9px 16px;
+  background: var(--lp-accent);
+  color: var(--lp-bg);
+  border-radius: 2px;
+  transition: background 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lp-cta:hover {
+  background: var(--lp-accent-hi);
+  color: var(--lp-bg);
+}
+
+.lp-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6vh 24px 0;
+  text-align: center;
+}
+
+/* The lit waypoint marker echoing the orb on top of the cairn in the render. */
+.lp-diamond {
+  width: 6px;
+  height: 6px;
+  background: var(--lp-accent);
+  transform: rotate(45deg);
+  box-shadow: 0 0 14px rgba(175, 201, 165, 0.75);
+}
+
+.lp-title {
+  margin: 24px 0 0;
+  font-family: var(--lp-font-serif), Georgia, serif;
+  font-size: clamp(72px, 10.2vw, 150px);
+  font-weight: 300;
+  letter-spacing: -0.005em;
+  line-height: 0.92;
+  color: var(--lp-heading);
+}
+
+.lp-deck {
+  margin: 22px 0 0;
+  max-width: 470px;
+  font-family: var(--lp-font-deck), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 16.5px;
+  line-height: 1.58;
+  letter-spacing: -0.005em;
+  color: var(--lp-deck);
+  text-wrap: pretty;
+}
+
+.lp-kicker {
+  margin: 16px 0 0;
+  font-family: var(--lp-font-mono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lp-kicker);
+}
+
+/* ---- browse form -------------------------------------------------------- */
+
+.lp-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 38px;
+}
+
+.lp-input {
+  width: min(58vw, 344px);
+  height: 46px;
+  padding: 0 14px;
+  background: rgba(229, 237, 200, 0.04);
+  border: 1px solid rgba(229, 237, 200, 0.12);
+  border-radius: 2px;
+  color: var(--lp-ink);
+  font-family: var(--lp-font-mono), ui-monospace, monospace;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 140ms cubic-bezier(0.2, 0, 0, 1), background 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lp-input::placeholder {
+  color: var(--lp-faint);
+}
+
+.lp-input:focus {
+  border-color: rgba(175, 201, 165, 0.55);
+  background: rgba(175, 201, 165, 0.05);
+}
+
+.lp-submit {
+  height: 46px;
+  padding: 0 20px;
+  background: var(--lp-accent);
+  color: var(--lp-bg);
+  border: none;
+  border-radius: 2px;
+  font-family: var(--lp-font-ui), system-ui, sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lp-submit:hover {
+  background: var(--lp-accent-hi);
+}
+
+.lp-hint {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--lp-faint);
+}
+
+.lp-mono {
+  font-family: var(--lp-font-mono), ui-monospace, monospace;
+}
+
+.lp-hint a {
+  color: var(--lp-deck);
+  transition: color 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lp-hint a:hover {
+  color: var(--lp-accent);
+}
+
+/* ---- feature strip and footer ------------------------------------------- */
+
+.lp-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 44px 34px;
+}
+
+.lp-strip-item {
+  padding: 0 26px;
+  border-left: 1px solid var(--lp-rule);
+}
+
+.lp-strip-item:first-child {
+  padding: 0 26px 0 0;
+  border-left: none;
+}
+
+.lp-strip-key {
+  font-family: var(--lp-font-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lp-label);
+}
+
+.lp-strip-body {
+  margin-top: 9px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--lp-body);
+}
+
+.lp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 44px 22px;
+  border-top: 1px solid var(--lp-rule-faint);
+  font-family: var(--lp-font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--lp-faint);
+}
+
+.lp-footer-links {
+  display: flex;
+  gap: 22px;
+}
+
+.lp-footer a {
+  color: var(--lp-faint);
+  transition: color 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lp-footer a:hover {
+  color: var(--lp-accent);
+}
+
+/* ---- responsive --------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .lp-annots {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .lp-nav {
+    display: none;
+  }
+
+  .lp-strip {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 28px;
+  }
+
+  /* With two columns the third item starts a new row, so it loses its rule too. */
+  .lp-strip-item:nth-child(3) {
+    padding-left: 0;
+    border-left: none;
+  }
+
+  .lp-footer {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .lp-header {
+    padding: 20px 24px;
+  }
+
+  .lp-strip,
+  .lp-footer {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}

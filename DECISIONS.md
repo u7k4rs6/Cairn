@@ -506,3 +506,33 @@ Judgment calls made while building Cairn, newest first within each milestone.
   existing per-repo namespacing (each `owner/name` maps to its own on-disk
   directory) is already the natural unit a routing layer would shard across,
   which is named in SUMMARY.md rather than re-derived from scratch.
+
+## Landing page (imported from Claude Design)
+
+- **The marketing landing page and the product UI are two route groups, not one
+  layout with a conditional.** `web/app/(app)/` owns the top bar, skip link, and
+  `#main` landmark for every product route; `web/app/(landing)/` owns the
+  full-bleed hero. Route groups carry no URL segment, so every path is unchanged.
+  The alternative (hiding the top bar when `usePathname() === "/"`) would have
+  forced the root layout client-side and left a header in the SSR output that the
+  landing page then had to paint over.
+- **The landing page is dark in both product themes.** It defines its own palette
+  under `.lp-root` rather than consuming the light "survey sheet" / "night
+  navigation" tokens, because the design is a single fixed composition lit by a
+  WebGL night scene; a light variant of it is a different design, not a recolor.
+- **three.js is a bundled dependency pinned to 0.184.0, not a CDN import.** The
+  design source lazy-loaded `three@0.184.0` from unpkg. A self-hosted Git host
+  should not make a third-party request on its front page, and the shaders are
+  sensitive to three's color-management defaults, so the version is pinned exactly
+  rather than floated with a caret. It still arrives through a dynamic `import()`
+  so it lands in its own chunk and the page is readable before it loads.
+- **The scene is a plain class (`components/landing/cairnScene.ts`), not a React
+  component.** The design shipped it as a custom element; React owns only its
+  lifetime (`CairnScene.tsx`), which keeps the WebGL code framework-free and makes
+  disposal explicit - three frees no GPU resources on its own and Strict Mode
+  mounts twice in development.
+- **The design's feature-strip copy was placeholder and is corrected.** It claimed
+  "Written in Rust for raw speed" and a footer of "cairn 0.4.2 - MIT". Cairn is
+  Java 21 and has no LICENSE file in the tree, so the four cards now state true
+  properties of this project and the footer no longer asserts a version or a
+  license. Every other string is the design's.
