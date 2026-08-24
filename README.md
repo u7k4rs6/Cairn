@@ -168,6 +168,31 @@ State lives in named Docker volumes, so it survives `docker compose down`. Reset
 
 <br>
 
+## Deploying it somewhere else
+
+Two containers, two build contexts: `cairn-api/Dockerfile` (context: repo root) and `web/Dockerfile` (context: `web/`). The variables below are the whole contract, and three of them are the difference between a deployment that looks fine and one where every browser-initiated write fails.
+
+**api service**
+
+| Variable | Why |
+| --- | --- |
+| `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` / `_DRIVER_CLASS_NAME` | The default is in-memory H2, which dies with the JVM. The Postgres driver is already on the classpath. |
+| `CAIRN_REPOS_DIR` | Root of the loose-object store. Needs a persistent volume; a container filesystem loses every repository on redeploy. |
+| `CAIRN_WEB_ORIGIN` | **Comma-separated list of the web app's public origins.** A browser sends `Origin` on same-origin POSTs too, so an unlisted origin gets a flat `403 Invalid CORS request` and sign-in fails with no clue why. The default is `http://localhost:3000`, which is right for compose and wrong for every real deployment. |
+| `CAIRN_COOKIE_SECURE` | Set to `true` anywhere served over HTTPS. Defaults to `false` so local HTTP development works. |
+
+**web service**
+
+| Variable | Why |
+| --- | --- |
+| `INTERNAL_API_URL` | Runtime only. Where the app's own server reaches the api service, privately (`http://api:8080` on compose, `http://<service>.railway.internal:8080` on Railway). `web/proxy.ts` reads it per request, which is why it must not go back into `next.config.ts`'s `rewrites()` - that resolves at build time and would freeze the `localhost:8080` fallback into the image. |
+| `NEXT_PUBLIC_API_BASE` | **Build argument, not a runtime variable.** `NEXT_PUBLIC_*` is inlined into the client bundle by `next build`, so it must be passed with `--build-arg`. Only used for the `git clone` URL shown to users, which has to be the api's *public* address because the git client runs on the visitor's machine. |
+| `PORT`, `HOSTNAME` | `HOSTNAME=0.0.0.0`; Next's standalone server otherwise binds `os.hostname()`, which is not guaranteed reachable. |
+
+The browser never talks to the api directly. It calls this app's own origin at `/api/*` and `web/proxy.ts` forwards that server-side, which is what keeps `cairn_session` a first-party cookie. Git clients are the exception: they hit the api's public URL, so it needs its own ingress.
+
+<br>
+
 ## The two documents that matter
 
 More than any single screen in the UI, these are why the project exists as an interview artifact. They are where you can check whether the reasoning holds up, not just whether the tests pass.

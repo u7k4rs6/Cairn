@@ -9,6 +9,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -25,12 +26,21 @@ import java.util.List;
  * before because M8's own verification drove every endpoint with {@code curl},
  * which does not enforce or even perform a CORS preflight the way a real browser
  * does; only exercising the UI in an actual browser (gap-closure audit) surfaced it.
+ *
+ * <p>{@code cairn.web-origin} takes a comma-separated list, because a deployed
+ * instance and a developer's {@code localhost:3000} are both legitimate callers at
+ * the same time and a single-valued setting forces an either/or. A browser sends
+ * {@code Origin} on a cross-origin request <em>and</em> on a same-origin non-GET,
+ * so this list must contain the web app's public origin even though every browser
+ * call is proxied same-origin through {@code web/proxy.ts}: Spring answers an
+ * unlisted origin with a flat {@code 403 Invalid CORS request}, which reaches the
+ * user as a failed sign-in with no hint about why.
  */
 @Configuration
 public class SecurityConfig {
 
     @Value("${cairn.web-origin:http://localhost:3000}")
-    private String webOrigin;
+    private String webOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -43,12 +53,24 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(webOrigin));
+        configuration.setAllowedOrigins(allowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
         return source;
+    }
+
+    /**
+     * Splits {@code cairn.web-origin} on commas, trimming each entry and dropping
+     * blanks so a trailing comma or a stray space in a deployment variable cannot
+     * register an origin that matches nothing.
+     */
+    private List<String> allowedOrigins() {
+        return Arrays.stream(webOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
     }
 }

@@ -219,6 +219,35 @@ route group, which now owns the top bar; URLs are unchanged. `three` 0.184.0 is 
 `npx eslint app components lib` are clean; verified in a browser at 1440px, 1280px,
 and 700px.
 
+## Deployment fixes (post-M9)
+Two defects that only appear in a built image, both found by driving the deployed
+instance rather than a local dev server:
+1. The `/api/*` browser proxy was a `next.config.ts` `rewrites()` entry, which
+   resolves at build time; `INTERNAL_API_URL` is a runtime variable, so every image
+   baked `http://localhost:8080` and every browser-initiated API call returned 500
+   while server-rendered pages kept working. Replaced with `web/proxy.ts`, which
+   resolves it per request.
+2. `cairn.web-origin` held a single origin and was left at its `http://localhost:3000`
+   default on the deployed API, so the browser's `Origin` header got a flat
+   `403 Invalid CORS request` on sign-in. `SecurityConfig` now accepts a
+   comma-separated list; the deployment still has to set the variable.
+
+Verified end to end against the production `next.config.ts` output
+(`node .next/standalone/server.js`, the exact artifact the Docker image runs) with a
+local seeded API: sign in through the browser, `Signed in as acme` in the top bar,
+`/api/me` 200 with the session cookie, sign out, and CSRF double-submit on writes.
+`README.md` now documents every environment variable both services need.
+
+A third defect surfaced while running the suite for those two: `GitHttpIntegrationTest`
+and `TeamAccessEndToEndTest` shell out to `git` for requests the server answers with
+`401 + WWW-Authenticate`, and `ProcessBuilder` inherits the developer's environment.
+On any machine exporting `GIT_ASKPASS` (VS Code sets one) git launched that helper and
+blocked on a credential prompt forever, so `./gradlew build` hung instead of failing.
+Both helpers now clear `GIT_ASKPASS`/`SSH_ASKPASS` and set `GIT_TERMINAL_PROMPT=0`.
+
+Full suite after all three fixes (`./gradlew build`): `cairn-vcs` 92, `cairn-transfer`
+10, `cairn-api` 96, 198 total, 0 failures.
+
 ## Next
 All nine milestones plus the gap-closure round are complete. See `SUMMARY.md` for the
 FR-by-FR completion audit, the full state of the project, exact build/run commands,

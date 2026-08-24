@@ -65,12 +65,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Server Components, route handlers, and this container's own next.config.ts
-      # rewrite (web/lib/apiBase.ts's apiBase) reach the api service by its plain
+      # Server Components, route handlers, and this container's own proxy.ts
+      # (web/lib/apiBase.ts's internalApiUrl) reach the api service by its plain
       # bridge-network service name - normal container-to-container networking, the
       # same shape as Railway's private network this whole design targets. The
       # browser itself never reads this: it only ever calls this app's own origin at
-      # /api/*, which the rewrite proxies here server-side.
+      # /api/*, which proxy.ts forwards here server-side.
       INTERNAL_API_URL: http://api:8080
       PORT: "3000"
       # Next's standalone server.js binds to os.hostname() by default, which isn't

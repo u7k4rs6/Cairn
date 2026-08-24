@@ -536,3 +536,35 @@ Judgment calls made while building Cairn, newest first within each milestone.
   Java 21 and has no LICENSE file in the tree, so the four cards now state true
   properties of this project and the footer no longer asserts a version or a
   license. Every other string is the design's.
+
+## Deployment (the `/api/*` proxy and CORS)
+
+- **The `/api/*` proxy moved out of `next.config.ts`'s `rewrites()` into
+  `web/proxy.ts`.** `rewrites()` is evaluated during `next build` and its
+  destination is frozen into `routes-manifest.json`, but `INTERNAL_API_URL` only
+  exists at container start, so every built image baked the
+  `http://localhost:8080` fallback. The symptom is deceptive: server-rendered
+  pages work (they read the environment at request time) while every
+  browser-initiated call - sign in, sign up, sign out, session status, and every
+  client island that writes - returns 500 against a port nothing is listening on.
+  Proxy runs per request in the Node.js runtime, so it reads the real value.
+- **`cairn.web-origin` accepts a comma-separated list.** A browser sends `Origin`
+  on same-origin non-GET requests too, so the API's CORS allow-list must contain
+  the web app's public origin even though `proxy.ts` makes every browser call
+  same-origin. A single-valued setting forced a choice between a deployed origin
+  and a developer's `localhost:3000`; Spring answers an unlisted origin with a
+  flat `403 Invalid CORS request`, which surfaces to the user as a failed sign-in
+  with no explanation. Splitting the value costs four lines and removes the
+  either/or.
+- **`cairn.cookie-secure` keeps defaulting to `false`.** Flipping the default
+  would break local HTTP development, which is the reason the flag exists; the
+  README's deployment table names it as required for any HTTPS deployment
+  instead.
+- **The two tests that shell out to `git` now clear `GIT_ASKPASS`/`SSH_ASKPASS`
+  and set `GIT_TERMINAL_PROMPT=0`.** Both deliberately drive unauthorized
+  requests, which the server answers with `401 + WWW-Authenticate`; git then asks
+  for a username. A `ProcessBuilder` inherits the developer's environment, so on
+  any machine that exports `GIT_ASKPASS` (VS Code sets one) git blocks on a
+  credential prompt nobody will answer and `./gradlew build` hangs indefinitely
+  rather than failing. Denying git every prompt channel makes an unauthorized
+  request fail immediately, which is what those assertions were always about.

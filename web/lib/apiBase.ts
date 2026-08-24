@@ -12,12 +12,26 @@
  * URL directly, because {@code cairn_session} is only delivered reliably as a
  * first-party, same-origin cookie. Client fetches resolve to "" (relative), so a
  * path like {@code `${apiBase()}/api/...`} becomes same-origin {@code /api/...},
- * which next.config.ts's rewrite proxies server-side to the private API.
+ * which proxy.ts forwards server-side to the private API.
  */
 export function apiBase(): string {
   if (typeof window !== "undefined") {
     return "";
   }
+  return internalApiUrl();
+}
+
+/**
+ * The private API origin, read fresh from the environment on every call.
+ *
+ * Deliberately not hoisted into a module constant and deliberately not resolved
+ * inside {@code next.config.ts}: {@code rewrites()} runs during {@code next build}
+ * and its destination is frozen into {@code routes-manifest.json}, so a value that
+ * only exists at container start (which is how every host, Railway included,
+ * supplies it) would bake as the {@code localhost:8080} fallback and every browser
+ * call to {@code /api/*} would 502. {@code proxy.ts} calls this per request instead.
+ */
+export function internalApiUrl(): string {
   return process.env.INTERNAL_API_URL || "http://localhost:8080";
 }
 

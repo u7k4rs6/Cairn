@@ -80,6 +80,17 @@ class GitHttpIntegrationTest {
         builder.environment().put("GIT_AUTHOR_EMAIL", "ada@cairn.dev");
         builder.environment().put("GIT_COMMITTER_NAME", "Ada");
         builder.environment().put("GIT_COMMITTER_EMAIL", "ada@cairn.dev");
+        // Never let git fall back to an interactive credential prompt. These tests
+        // deliberately drive unauthorized requests, which the server answers with
+        // 401 + WWW-Authenticate; git then asks for a username, and on a developer
+        // machine that inherits GIT_ASKPASS (VS Code sets one) or a terminal, it
+        // blocks on a prompt nobody will ever answer and the build hangs forever
+        // instead of failing. Unset both askpass hooks and disable the terminal
+        // prompt so an unauthorized request fails immediately, which is what these
+        // assertions are actually about.
+        builder.environment().remove("GIT_ASKPASS");
+        builder.environment().remove("SSH_ASKPASS");
+        builder.environment().put("GIT_TERMINAL_PROMPT", "0");
         Process process = builder.start();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         process.getInputStream().transferTo(out);
